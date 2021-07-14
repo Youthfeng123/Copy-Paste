@@ -125,18 +125,26 @@ def copy_paste(mask_src, img_src, mask_main, img_main):
 
 
 def main(args):
+    #directories
     main_img_dir=args.input_dir
     main_mask_dir=os.path.join(main_img_dir,"..","annotation")
     out_dir=args.output_dir
     source_dir=args.source_dir
 
-    print(main_mask_dir)
-      #all kinds of directory
+    out_train=os.path.join(out_dir,"train")
+    out_dev=os.path.join(out_dir,"dev")
+    train_img=os.path.join(out_train,"images")
+    train_mask=os.path.join(out_train,"masks")
+    dev_img=os.path.join(out_dev,"images")
+    dev_mask=os.path.join(out_dev,"masks")
 
-    out_img=os.path.join(out_dir,"images")
-    out_mask=os.path.join(out_dir,"masks")
-    os.makedirs(out_img,exist_ok=True)
-    os.makedirs(out_mask,exist_ok=True)  #create folders
+
+
+    os.makedirs(train_img,exist_ok=True)
+    os.makedirs(train_mask,exist_ok=True)  #create folders
+    os.makedirs(dev_img,exist_ok=True)
+    os.makedirs(dev_mask,exist_ok=True)
+
 
     #get main image names
     main_img_name=os.listdir(main_img_dir)
@@ -147,18 +155,20 @@ def main(args):
 
 
 
-    tbar=tqdm.tqdm(main_img_name,ncols=100)
+    
     index=0
 
     #iterates them
-    for img in tbar:
+    for img in main_img_name:
         name=img.split('.')[0] #get name
         img_dir=os.path.join(main_img_dir,img) #directory of main image
         mask_dir=os.path.join(main_img_dir,'..','annotation',name+'.png') # directory of main mask
 
-        
+        print("Pocessing "+name)
+
+        tbar=tqdm.tqdm(range(args.nums),ncols=100)
         #generate samples
-        for num in range(args.nums):
+        for num in tbar:
             #choose a source image randomly
             source_img=np.random.choice(source_img_name)
             source_img_dir=os.path.join(source_dir,source_img)
@@ -170,8 +180,15 @@ def main(args):
             
             #generate!
             mask, img = copy_paste(mask_main, img_main,mask_src, img_src)
-            cv2.imwrite(os.path.join(out_img,str(index)+'.jpg'),img)
-            cv2.imwrite(os.path.join(out_mask,str(index)+'.png'),mask)
+
+
+
+            if((index%300)<75): #save as dev set
+                cv2.imwrite(os.path.join(dev_img,str(index)+'.jpg'),img)
+                cv2.imwrite(os.path.join(dev_mask,str(index)+'.png'),mask)
+            else:  #save as training set
+                cv2.imwrite(os.path.join(train_img,str(index)+'.jpg'),img)
+                cv2.imwrite(os.path.join(train_mask,str(index)+'.png'),mask)
             index=index+1
 
             #save
@@ -191,7 +208,7 @@ def get_args():
     parser=argparse.ArgumentParser(description="Copy-Paste Pocess")
     parser.add_argument("-i","--input_dir",type=str,help="directory of input images",default="./gt_resize/support/images")
     parser.add_argument("-o","--output_dir",type=str,help="directory that you want to store your results",default=\
-        "./gt_resize/generations")
+        "./generations")
     parser.add_argument('-s',"--source_dir",type=str,help="directory of source images",default="./train2017/")
     parser.add_argument('-n',"--nums",type=int,help="number of datas for each foreground",default=300)
     args=parser.parse_args()
