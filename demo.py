@@ -10,6 +10,10 @@ import tqdm
 import re
 
 
+
+
+
+
 def save_colored_mask(mask, save_path):
     lbl_pil = Image.fromarray(mask.astype(np.uint8), mode="P")
     colormap = imgviz.label_colormap()
@@ -130,7 +134,7 @@ def main(args):
       #all kinds of directory
 
     out_img=os.path.join(out_dir,"images")
-    out_mask=os.path.join(out_dir,"mask")
+    out_mask=os.path.join(out_dir,"masks")
     os.makedirs(out_img,exist_ok=True)
     os.makedirs(out_mask,exist_ok=True)  #create folders
 
@@ -141,56 +145,45 @@ def main(args):
     #get source image names
     source_img_name=os.listdir(source_dir)
 
+
+
+    tbar=tqdm.tqdm(main_img_name,ncols=100)
+    index=0
+
     #iterates them
-    for img in main_img_name:
+    for img in tbar:
         name=img.split('.')[0] #get name
         img_dir=os.path.join(main_img_dir,img) #directory of main image
         mask_dir=os.path.join(main_img_dir,'..','annotation',name+'.png') # directory of main mask
 
-        source_img=np.random.choice(source_img_name)
-        source_img_dir=os.path.join(source_dir,source_img)
+        
+        #generate samples
+        for num in range(args.nums):
+            #choose a source image randomly
+            source_img=np.random.choice(source_img_name)
+            source_img_dir=os.path.join(source_dir,source_img)
+            #directory
+            img_src=cv2.imread(source_img_dir)
+            mask_src=np.asarray(np.zeros((img_src.shape[0],img_src.shape[1])),dtype=np.uint8)
+            img_main=cv2.imread(img_dir)
+            mask_main=np.asarray(Image.open(mask_dir),dtype=np.uint8)   
+            
+            #generate!
+            mask, img = copy_paste(mask_main, img_main,mask_src, img_src)
+            cv2.imwrite(os.path.join(out_img,str(index)+'.jpg'),img)
+            cv2.imwrite(os.path.join(out_mask,str(index)+'.png'),mask)
+            index=index+1
+
+            #save
 
 
-        img_src=cv2.imread(source_img_dir)
-        mask_src=np.asarray(np.zeros((img_src.shape[0],img_src.shape[1])),dtype=np.uint8)
-
-        img_main=cv2.imread(img_dir)
-        mask_main=np.asarray(Image.open(mask_dir),dtype=np.uint8)
-
-        mask, img = copy_paste(mask_main, img_main,mask_src, img_src)
-
-
-        # cv2.imshow('background',img_src)
-        cv2.imshow('mask',mask*255)
-        cv2.imshow('picture',img)
-
-        cv2.waitKey(0)
-
-
-
-
-
-
-
+        
 
 
 
-    # src_mask=np.asarray(Image.open('./gt_resize/support/annotation/1.png'),dtype=np.uint8)
-    # src_img=cv2.imread('./gt_resize/support/images/1.jpg')
-
-    
-    # main_img=cv2.imread('./gt_resize/query/images/27.jpg')
-    # main_mask=np.asarray(np.zeros((main_img.shape[0],main_img.shape[1])),dtype=np.uint8)
-    # # cv2.imshow('dsd',main_img)
 
 
-    # mask,img=copy_paste(src_mask,src_img,main_mask,main_img)
 
-    # cv2.imshow('img',img)
-
-    # cv2.imshow('mask',mask*255)
-
-    # cv2.waitKey(0)
 
 
 
@@ -200,6 +193,7 @@ def get_args():
     parser.add_argument("-o","--output_dir",type=str,help="directory that you want to store your results",default=\
         "./gt_resize/generations")
     parser.add_argument('-s',"--source_dir",type=str,help="directory of source images",default="./train2017/")
+    parser.add_argument('-n',"--nums",type=int,help="number of datas for each foreground",default=300)
     args=parser.parse_args()
 
     return args
