@@ -1,5 +1,1 @@
-Creating a new branch is quick and simple.
-
-
-
-change
+An demo that utilize Copy-Paste to data augmentation.
